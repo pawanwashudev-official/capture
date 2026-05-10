@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Link as LinkIcon, Trash2, Copy, Check } from 'lucide-react';
+import { Plus, Link as LinkIcon, Trash2, Copy, Check, Unlock } from 'lucide-react';
 import { generateKeyPair } from '../utils/crypto';
 import { saveRequest, getAllRequests, deleteRequest } from '../utils/db';
+import { useNavigate } from 'react-router-dom';
 
 interface RequestItem {
   id: string;
@@ -11,6 +12,7 @@ interface RequestItem {
 }
 
 const Home: React.FC = () => {
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [newName, setNewName] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -85,6 +87,18 @@ const Home: React.FC = () => {
             <Plus size={20} />
             Create
           </button>
+        </div>
+      </section>
+
+      <section className="card" onClick={() => navigate('/unlock')} style={{ cursor: 'pointer', background: 'var(--primary)', color: 'white' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ background: 'rgba(255,255,255,0.2)', padding: '0.75rem', borderRadius: '12px' }}>
+            <Unlock size={24} />
+          </div>
+          <div>
+            <h2 style={{ margin: 0, color: 'white', fontSize: '1.25rem' }}>Unlock Photo</h2>
+            <p style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem' }}>Open an .nfcapture file you received.</p>
+          </div>
         </div>
       </section>
 
