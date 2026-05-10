@@ -1,4 +1,5 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { Github, Instagram, Send, Mail } from 'lucide-react';
 import Home from './views/Home';
 import Capture from './views/Capture';
 import Unlock from './views/Unlock';
@@ -17,22 +18,36 @@ function App() {
             <Route path="/unlock" element={<Unlock />} />
           </Routes>
         </main>
+        
         <footer className="footer">
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ color: 'var(--text)', margin: '0 0 0.5rem 0' }}>NFCapture</h3>
-            <p style={{ margin: 0 }}>100% Serverless. End-to-End Encrypted. No Database.</p>
-          </div>
-          
-          <div className="footer-links">
-            <a href="mailto:pawanwashudev@neubofy.in" className="footer-link">Email</a>
-            <a href="https://instagram.com/pawan_washudev" target="_blank" className="footer-link">Instagram</a>
-            <a href="https://t.me/pawanwashudev" target="_blank" className="footer-link">Telegram</a>
+          <div style={{ marginBottom: '2rem' }}>
+            <h3 style={{ color: 'var(--text)', margin: '0 0 0.5rem 0', fontSize: '1.5rem', fontWeight: 800 }}>NFCapture</h3>
+            <p style={{ margin: 0, maxWidth: '300px', marginLeft: 'auto', marginRight: 'auto' }}>
+              Restoring trust in photography through serverless cryptography.
+            </p>
           </div>
 
-          <div style={{ marginTop: '2rem', fontSize: '0.8rem' }}>
-            <p style={{ margin: '0.25rem 0' }}>Developed by <strong>Pawan Washudev</strong></p>
+          <a href="https://github.com/pawanwashudev-official/NFCapture" target="_blank" className="btn btn-github">
+            <Github size={20} />
+            Source Code
+          </a>
+          
+          <div className="footer-links" style={{ marginTop: '2.5rem' }}>
+            <a href="mailto:pawanwashudev@neubofy.in" className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Mail size={16} /> Email
+            </a>
+            <a href="https://instagram.com/pawan_washudev" target="_blank" className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Instagram size={16} /> Instagram
+            </a>
+            <a href="https://t.me/pawanwashudev" target="_blank" className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Send size={16} /> Telegram
+            </a>
+          </div>
+
+          <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border)', fontSize: '0.85rem' }}>
+            <p style={{ margin: '0.25rem 0', color: 'var(--text)', fontWeight: 700 }}>Pawan Washudev</p>
             <p style={{ margin: '0.25rem 0' }}>Founder @ Neubofy</p>
-            <p style={{ margin: '0.25rem 0' }}>Support: <a href="mailto:support@neubofy.in" style={{ color: 'inherit' }}>support@neubofy.in</a></p>
+            <p style={{ margin: '0.25rem 0' }}>Support: <a href="mailto:support@neubofy.in" style={{ color: 'var(--primary)', fontWeight: 600 }}>support@neubofy.in</a></p>
           </div>
         </footer>
       </div>

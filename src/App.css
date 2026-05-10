@@ -122,18 +122,33 @@ body {
 
 .footer {
   text-align: center;
-  padding: 3rem 1rem;
-  background: white;
-  border-top: 1px solid var(--border);
+  padding: 4rem 1.25rem;
+  background: #fdfdfd;
+  border-top: 2px solid var(--border);
   color: var(--text-light);
+  margin-top: 4rem; /* Better separation from content */
 }
 
 .footer-links {
   display: flex;
   justify-content: center;
-  gap: 1rem;
-  margin: 1rem 0;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
   flex-wrap: wrap;
+}
+
+.btn-github {
+  background: #181717;
+  color: white;
+  margin-top: 1rem;
+  max-width: 200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.btn-github:hover {
+  background: #000;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
 }
 
 .footer-link {
