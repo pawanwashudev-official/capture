@@ -1,5 +1,5 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import { Github, Instagram, Send, Mail } from 'lucide-react';
+import { ExternalLink, Instagram, Send, Mail } from 'lucide-react';
 import Home from './views/Home';
 import Capture from './views/Capture';
 import Unlock from './views/Unlock';
@@ -28,7 +28,7 @@ function App() {
           </div>
 
           <a href="https://github.com/pawanwashudev-official/NFCapture" target="_blank" className="btn btn-github">
-            <Github size={20} />
+            <ExternalLink size={20} />
             Source Code
           </a>
           
