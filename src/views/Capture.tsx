@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Camera, RefreshCcw, Check, Share2, Download, AlertCircle } from 'lucide-react';
+import { Camera, RefreshCcw, Check, Share2, Download, AlertCircle, FlipHorizontal } from 'lucide-react';
 import { encryptImage } from '../utils/crypto';
 
 const Capture: React.FC = () => {
@@ -11,6 +11,7 @@ const Capture: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isEncrypting, setIsEncrypting] = useState(false);
@@ -27,12 +28,17 @@ const Capture: React.FC = () => {
     return () => {
       stopCamera();
     };
-  }, [publicKey]);
+  }, [publicKey, facingMode]);
 
   const startCamera = async () => {
+    stopCamera();
     try {
       const s = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' }, // Front camera for "selfie" trust
+        video: { 
+          facingMode: facingMode,
+          width: { ideal: 1080 },
+          height: { ideal: 1080 }
+        },
         audio: false 
       });
       setStream(s);
@@ -40,8 +46,12 @@ const Capture: React.FC = () => {
         videoRef.current.srcObject = s;
       }
     } catch (err) {
-      setError('Camera access denied. This app requires camera permission to guarantee a live photo.');
+      setError('Camera access denied or unavailable.');
     }
+  };
+
+  const toggleCamera = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
   const stopCamera = () => {
@@ -150,10 +160,26 @@ const Capture: React.FC = () => {
           
           <div className="camera-container">
             <video ref={videoRef} autoPlay playsInline muted />
+            <button 
+              className="btn btn-outline" 
+              onClick={toggleCamera} 
+              style={{ 
+                position: 'absolute', 
+                top: '1rem', 
+                right: '1rem', 
+                width: 'auto', 
+                padding: '0.6rem', 
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.8)',
+                backdropFilter: 'blur(4px)'
+              }}
+            >
+              <FlipHorizontal size={20} />
+            </button>
           </div>
           
-          <button className="btn btn-primary" onClick={captureFrame}>
-            <Camera size={20} />
+          <button className="btn btn-primary" onClick={captureFrame} style={{ padding: '1rem' }}>
+            <Camera size={24} />
             Capture Photo
           </button>
           

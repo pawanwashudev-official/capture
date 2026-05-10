@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Link as LinkIcon, Trash2, Copy, Check } from 'lucide-react';
+import { Plus, Link as LinkIcon, Trash2, Copy, Check, Download, Upload } from 'lucide-react';
 import { generateKeyPair } from '../utils/crypto';
 import { saveRequest, getAllRequests, deleteRequest } from '../utils/db';
 
@@ -22,6 +22,34 @@ const Home: React.FC = () => {
   const loadRequests = async () => {
     const data = await getAllRequests();
     setRequests(data.sort((a, b) => b.createdAt - a.createdAt));
+  };
+
+  const handleExport = () => {
+    const data = JSON.stringify(requests, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nfcapture_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const imported: RequestItem[] = JSON.parse(text);
+      for (const req of imported) {
+        await saveRequest(req);
+      }
+      loadRequests();
+      alert('Backup restored successfully!');
+    } catch (err) {
+      alert('Failed to import backup. Invalid file format.');
+    }
   };
 
   const handleCreate = async () => {
@@ -61,6 +89,29 @@ const Home: React.FC = () => {
 
   return (
     <div className="home-view">
+      <section className="card">
+        <h2>Backup & Restore</h2>
+        <p>Transfer your keys to another device or save a backup.</p>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button className="btn btn-outline" onClick={handleExport}>
+            <Download size={18} />
+            Export Backup
+          </button>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <input 
+              type="file" 
+              accept=".json" 
+              onChange={handleImport}
+              style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 2, marginBottom: 0 }}
+            />
+            <button className="btn btn-outline">
+              <Upload size={18} />
+              Import Backup
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section className="card">
         <h2>Create New Request</h2>
         <p style={{ color: 'var(--text-light)', marginBottom: '1rem' }}>Generate a unique link to send to the groom.</p>
