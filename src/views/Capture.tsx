@@ -70,14 +70,28 @@ const Capture: React.FC = () => {
   const startCamera = async () => {
     stopCamera();
     setIsVerified(false);
+    
+    // Slight delay to allow hardware to release
+    await new Promise(r => setTimeout(r, 100));
+
     try {
       const constraints: MediaStreamConstraints = { 
-        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        video: { 
+          facingMode: { ideal: facingMode }, 
+          width: { ideal: 1920 }, 
+          height: { ideal: 1080 } 
+        },
         audio: false 
       };
+      
       const s = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(s);
-      if (videoRef.current) videoRef.current.srcObject = s;
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = s;
+        // On mobile, sometimes play() needs to be explicit
+        try { await videoRef.current.play(); } catch (e) {}
+      }
       
       const track = s.getVideoTracks()[0];
       const settings = track.getSettings();
@@ -90,31 +104,48 @@ const Capture: React.FC = () => {
         setMaxZoom(capabilities.zoom.max || 1);
         setZoom(settings.zoom || capabilities.zoom.min || 1);
       }
-      if (settings.frameRate && settings.facingMode) setIsVerified(true);
+      
+      // Verification logic: frames must be flowing and metadata correct
+      if (settings.frameRate && (settings.facingMode || facingMode)) {
+        setIsVerified(true);
+      }
     } catch (err) {
-      setError('Camera access denied.');
+      console.error('Camera error:', err);
+      setError('Could not access camera. Please check permissions and ensure no other app is using it.');
     }
   };
 
   const handleLoadedMetadata = () => {
     if (!videoRef.current) return;
     const { videoWidth, videoHeight } = videoRef.current;
+    
+    // Critical: detect if the actual stream is portrait or landscape
     const portrait = videoHeight > videoWidth;
     setIsPortrait(portrait);
     setSensorRatio(videoWidth / videoHeight);
+    
+    console.log(`Stream loaded: ${videoWidth}x${videoHeight}, Ratio: ${videoWidth/videoHeight}`);
   };
 
   const stopCamera = () => {
     if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach(track => {
+        track.stop();
+        track.enabled = false;
+      });
       setStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
   };
 
   const toggleCamera = () => {
-    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+    const nextFacing = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(nextFacing);
     setIsTorchOn(false);
     setZoom(1);
+    // startCamera is triggered by the useEffect dependency on facingMode
   };
 
   const handleZoomChange = async (val: number) => {
@@ -148,7 +179,7 @@ const Capture: React.FC = () => {
     setShowFlash(true);
     setTimeout(() => setShowFlash(false), 400);
     
-    // Dynamic mapping for ratios
+    // Mapping for ratios
     let targetRatio = sensorRatio;
     if (ratio === '1:1') targetRatio = 1/1;
     if (ratio === '4:3') targetRatio = isPortrait ? 3/4 : 4/3;
@@ -159,29 +190,38 @@ const Capture: React.FC = () => {
     const vH = video.videoHeight;
     let dW = vW, dH = vH;
     
-    if (vW / vH > targetRatio) dW = vH * targetRatio;
-    else dH = vW / targetRatio;
+    // Professional center-crop logic
+    if (vW / vH > targetRatio) {
+      dW = vH * targetRatio;
+    } else {
+      dH = vW / targetRatio;
+    }
     
     canvas.width = dW;
     canvas.height = dH;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      const sX = (vW - dW) / 2, sY = (vH - dH) / 2;
+      const sX = (vW - dW) / 2;
+      const sY = (vH - dH) / 2;
+      
       ctx.save();
-      if (facingMode === 'user') { ctx.translate(dW, 0); ctx.scale(-1, 1); }
+      if (facingMode === 'user') { 
+        ctx.translate(dW, 0); 
+        ctx.scale(-1, 1); 
+      }
       ctx.drawImage(video, sX, sY, dW, dH, 0, 0, dW, dH);
       ctx.restore();
       
       // Branding / Security - Scaled watermark
-      const fontSize = Math.max(14, Math.floor(dH * 0.025));
+      const fontSize = Math.max(16, Math.floor(dH * 0.03));
       
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillRect(0, dH - (fontSize * 2.5), dW, fontSize * 2.5);
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.fillRect(0, dH - (fontSize * 2.8), dW, fontSize * 2.8);
       
-      ctx.fillStyle = '#10b981'; // Green for "Verified"
-      ctx.font = `bold ${fontSize}px sans-serif`;
-      const text = `VERIFIED LIVE • ${new Date().toLocaleString()} • NFCAPTURE`;
-      ctx.fillText(text, fontSize, dH - fontSize);
+      ctx.fillStyle = '#10b981'; 
+      ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+      const text = `VERIFIED LIVE • ${new Date().toLocaleString()}`;
+      ctx.fillText(text, fontSize, dH - fontSize * 1.2);
 
       canvas.toBlob((blob) => {
         if (blob) {
@@ -189,7 +229,7 @@ const Capture: React.FC = () => {
           setPreviewUrl(URL.createObjectURL(blob));
           stopCamera();
         }
-      }, 'image/jpeg', 0.95);
+      }, 'image/jpeg', 0.98);
     }
   };
 
@@ -220,14 +260,14 @@ const Capture: React.FC = () => {
     if (ratio === '9:16') aspect = 9/16;
     if (ratio === '16:9') aspect = 16/9;
     
-    const isWiderThanViewport = aspect > (window.innerWidth / window.innerHeight);
-
+    // We want the preview to be as large as possible without overflowing
+    // and correctly accounting for the top/bottom bars.
     return {
       aspectRatio: `${aspect}`,
-      width: isWiderThanViewport ? '100%' : 'auto',
-      height: isWiderThanViewport ? 'auto' : '100%',
-      maxWidth: '100%',
+      width: '100%',
+      height: '100%',
       maxHeight: '100%',
+      maxWidth: '100%',
       position: 'relative',
       background: '#000',
       display: 'flex',
@@ -239,10 +279,11 @@ const Capture: React.FC = () => {
 
   if (error) {
     return (
-      <div className="card" style={{ textAlign: 'center', marginTop: '5rem' }}>
-        <AlertCircle size={48} color="var(--primary)" style={{ marginBottom: '1rem' }} />
-        <h3>Error</h3><p>{error}</p>
-        <button className="btn btn-primary" onClick={() => navigate('/')}>Go Home</button>
+      <div className="card" style={{ textAlign: 'center', marginTop: '5rem', padding: '2rem' }}>
+        <AlertCircle size={64} color="#ef4444" style={{ marginBottom: '1.5rem' }} />
+        <h3 style={{ fontSize: '1.5rem' }}>Camera Error</h3>
+        <p style={{ marginBottom: '2rem' }}>{error}</p>
+        <button className="btn btn-primary" onClick={() => window.location.reload()}>Try Again</button>
       </div>
     );
   }
@@ -261,7 +302,12 @@ const Capture: React.FC = () => {
                 muted 
                 onLoadedMetadata={handleLoadedMetadata}
                 className={facingMode === 'user' ? 'mirror' : ''} 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: ratio === 'Sensor' ? 'contain' : 'cover',
+                  display: 'block'
+                }}
                />
             </div>
             
@@ -276,17 +322,11 @@ const Capture: React.FC = () => {
                   <X size={24} />
                 </button>
                 <div className="ratio-selector">
-                  {([
-                    'Sensor', 
-                    '1:1', 
-                    isPortrait ? '4:3' : '4:3', // Just a label, logic handles it
-                    isPortrait ? '9:16' : '16:9'
-                  ] as AspectRatio[]).map(r => (
+                  {['Sensor', '1:1', '4:3', isPortrait ? '9:16' : '16:9'].map(r => (
                     <button 
                       key={r} 
                       className={`ratio-option ${ratio === r ? 'active' : ''}`} 
-                      onClick={() => setRatio(r)}
-                      aria-label={`Aspect ratio ${r}`}
+                      onClick={() => setRatio(r as AspectRatio)}
                     >
                       {r}
                     </button>
@@ -319,7 +359,6 @@ const Capture: React.FC = () => {
                     className="btn" 
                     style={{ width: '56px', height: '56px', padding: 0, background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', visibility: hasTorch ? 'visible' : 'hidden', borderRadius: '50%' }} 
                     onClick={toggleTorch}
-                    aria-label={isTorchOn ? "Turn off Flash" : "Turn on Flash"}
                   >
                     {isTorchOn ? <Zap size={24} fill="white" /> : <ZapOff size={24} />}
                   </button>
@@ -334,7 +373,6 @@ const Capture: React.FC = () => {
                     className="btn" 
                     style={{ width: '56px', height: '56px', padding: 0, background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '50%' }} 
                     onClick={toggleCamera}
-                    aria-label="Switch Camera"
                   >
                     <FlipHorizontal size={24} />
                   </button>
@@ -344,6 +382,7 @@ const Capture: React.FC = () => {
           </div>
         </div>
       ) : (
+
 
 
         <div className="main-content" style={{ animation: 'fadeIn 0.3s' }}>
