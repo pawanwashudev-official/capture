@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { RefreshCcw, Check, Share2, Download, AlertCircle, FlipHorizontal, Zap, ZapOff, X, ShieldCheck } from 'lucide-react';
 import { encryptImage } from '../utils/crypto';
 
-type AspectRatio = '1-1' | '4-3' | '16-9';
+type AspectRatio = '1-1' | '4-3' | '16-9' | '9-16';
 
 const Capture: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -38,6 +38,20 @@ const Capture: React.FC = () => {
     };
   }, [publicKey, facingMode]);
 
+  // Volume Button Capture Logic
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isVolumeKey = ['VolumeUp', 'VolumeDown', 'AudioVolumeUp', 'AudioVolumeDown'].includes(e.key);
+      if (isVolumeKey && !capturedBlob && stream) {
+        e.preventDefault();
+        captureFrame();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [capturedBlob, stream]);
+
   const startCamera = async () => {
     stopCamera();
     setIsVerified(false);
@@ -63,7 +77,6 @@ const Capture: React.FC = () => {
       const capabilities = track.getCapabilities() as any;
       setHasTorch(!!capabilities.torch);
       
-      // Hardware Verification: Check for real hardware characteristics
       if (settings.frameRate && settings.facingMode) {
         setIsVerified(true);
       }
@@ -112,6 +125,7 @@ const Capture: React.FC = () => {
     let targetWidth = video.videoWidth;
     let targetHeight = video.videoHeight;
     
+    // Exact Aspect Ratio Logic
     if (ratio === '1-1') {
       const size = Math.min(targetWidth, targetHeight);
       targetWidth = size;
@@ -128,6 +142,12 @@ const Capture: React.FC = () => {
       } else {
         targetHeight = targetWidth / (16/9);
       }
+    } else if (ratio === '9-16') {
+       if (targetWidth / targetHeight > 9/16) {
+        targetWidth = targetHeight * (9/16);
+      } else {
+        targetHeight = targetWidth / (9/16);
+      }
     }
     
     canvas.width = targetWidth;
@@ -135,16 +155,27 @@ const Capture: React.FC = () => {
     
     const ctx = canvas.getContext('2d');
     if (ctx) {
+      // Precision Centering
       const startX = (video.videoWidth - targetWidth) / 2;
       const startY = (video.videoHeight - targetHeight) / 2;
-      ctx.drawImage(video, startX, startY, targetWidth, targetHeight, 0, 0, targetWidth, targetHeight);
       
-      // Verification Stamp
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(10, targetHeight - 40, 220, 30);
+      ctx.save();
+      
+      // Mirror result if using front camera to match preview and user expectations
+      if (facingMode === 'user') {
+        ctx.translate(targetWidth, 0);
+        ctx.scale(-1, 1);
+      }
+      
+      ctx.drawImage(video, startX, startY, targetWidth, targetHeight, 0, 0, targetWidth, targetHeight);
+      ctx.restore();
+      
+      // Verification Stamp (Deep Rended into pixels)
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(10, targetHeight - 45, 230, 35);
       ctx.fillStyle = 'white';
       ctx.font = 'bold 12px monospace';
-      ctx.fillText(`VERIFIED LIVE: ${new Date().toLocaleString()}`, 20, targetHeight - 20);
+      ctx.fillText(`VERIFIED LIVE: ${new Date().toLocaleString()}`, 20, targetHeight - 22);
 
       canvas.toBlob((blob) => {
         if (blob) {
@@ -184,7 +215,6 @@ const Capture: React.FC = () => {
         type: 'application/octet-stream' 
       });
 
-      // Check if browser supports sharing this specific file
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -192,13 +222,10 @@ const Capture: React.FC = () => {
           text: 'Verified unedited photo via NFCapture'
         });
       } else {
-        // Fallback for browsers that support share but not file share
         handleDownload();
       }
     } catch (err) {
-      // Don't trigger download if user just cancelled the share
       if ((err as Error).name !== 'AbortError') {
-        console.error('Share failed:', err);
         handleDownload();
       }
     }
@@ -236,7 +263,7 @@ const Capture: React.FC = () => {
 
           <div className="camera-preview-wrapper">
             <div className={`camera-container ratio-${ratio}`} style={{ border: 'none', boxShadow: 'none', borderRadius: 0, margin: 0 }}>
-               <video ref={videoRef} autoPlay playsInline muted />
+               <video ref={videoRef} autoPlay playsInline muted className={facingMode === 'user' ? 'mirror' : ''} />
             </div>
 
             <div className="camera-overlay-top">
@@ -251,6 +278,7 @@ const Capture: React.FC = () => {
                 <span className={`ratio-option ${ratio === '1-1' ? 'active' : ''}`} onClick={() => setRatio('1-1')}>1:1</span>
                 <span className={`ratio-option ${ratio === '4-3' ? 'active' : ''}`} onClick={() => setRatio('4-3')}>4:3</span>
                 <span className={`ratio-option ${ratio === '16-9' ? 'active' : ''}`} onClick={() => setRatio('16-9')}>16:9</span>
+                <span className={`ratio-option ${ratio === '9-16' ? 'active' : ''}`} onClick={() => setRatio('9-16')}>9:16</span>
               </div>
               <div style={{ width: 40 }} />
             </div>
@@ -264,7 +292,7 @@ const Capture: React.FC = () => {
                   ) : <div style={{ width: 44 }} />}
                   
                   <button className="shutter-btn" onClick={captureFrame}>
-                    <div style={{ width: 50, height: 50, borderRadius: '50%', border: '2px solid #000' }} />
+                    <div style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid #000' }} />
                   </button>
 
                   <button className="control-btn" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none' }} onClick={toggleCamera}>
