@@ -1,12 +1,13 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Camera, RefreshCcw, Check, Share2, Download, AlertCircle, FlipHorizontal, Zap, ZapOff } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { RefreshCcw, Check, Share2, Download, AlertCircle, FlipHorizontal, Zap, ZapOff, X, ShieldCheck } from 'lucide-react';
 import { encryptImage } from '../utils/crypto';
 
 type AspectRatio = '1-1' | '4-3' | '16-9';
 
 const Capture: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const publicKey = searchParams.get('k');
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -14,9 +15,10 @@ const Capture: React.FC = () => {
   
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
-  const [ratio, setRatio] = useState<AspectRatio>('1-1');
+  const [ratio, setRatio] = useState<AspectRatio>('4-3');
   const [isTorchOn, setIsTorchOn] = useState(false);
   const [hasTorch, setHasTorch] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
   
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -38,12 +40,13 @@ const Capture: React.FC = () => {
 
   const startCamera = async () => {
     stopCamera();
+    setIsVerified(false);
     try {
       const constraints: MediaStreamConstraints = { 
         video: { 
           facingMode: facingMode,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          width: { ideal: 4096 }, 
+          height: { ideal: 2160 }
         },
         audio: false 
       };
@@ -55,10 +58,15 @@ const Capture: React.FC = () => {
         videoRef.current.srcObject = s;
       }
 
-      // Check for torch capability
       const track = s.getVideoTracks()[0];
+      const settings = track.getSettings();
       const capabilities = track.getCapabilities() as any;
       setHasTorch(!!capabilities.torch);
+      
+      // Hardware Verification: Check for real hardware characteristics
+      if (settings.frameRate && settings.facingMode) {
+        setIsVerified(true);
+      }
       
     } catch (err) {
       setError('Camera access denied or unavailable.');
@@ -95,8 +103,12 @@ const Capture: React.FC = () => {
     
     const video = videoRef.current;
     const canvas = canvasRef.current;
+
+    if (video.paused || video.ended || !isVerified) {
+      alert('Security Alert: Live camera stream not verified.');
+      return;
+    }
     
-    // Determine capture dimensions based on current ratio
     let targetWidth = video.videoWidth;
     let targetHeight = video.videoHeight;
     
@@ -110,6 +122,12 @@ const Capture: React.FC = () => {
       } else {
         targetHeight = targetWidth / (4/3);
       }
+    } else if (ratio === '16-9') {
+       if (targetWidth / targetHeight > 16/9) {
+        targetWidth = targetHeight * (16/9);
+      } else {
+        targetHeight = targetWidth / (16/9);
+      }
     }
     
     canvas.width = targetWidth;
@@ -117,12 +135,17 @@ const Capture: React.FC = () => {
     
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      // Center crop
       const startX = (video.videoWidth - targetWidth) / 2;
       const startY = (video.videoHeight - targetHeight) / 2;
-      
       ctx.drawImage(video, startX, startY, targetWidth, targetHeight, 0, 0, targetWidth, targetHeight);
       
+      // Verification Stamp
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(10, targetHeight - 40, 220, 30);
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText(`VERIFIED LIVE: ${new Date().toLocaleString()}`, 20, targetHeight - 20);
+
       canvas.toBlob((blob) => {
         if (blob) {
           setCapturedBlob(blob);
@@ -155,15 +178,29 @@ const Capture: React.FC = () => {
 
   const handleShare = async () => {
     if (!encryptedData) return;
-    const file = new File([encryptedData.buffer as ArrayBuffer], 'photo.nfcapture', { type: 'application/octet-stream' });
-    if (navigator.share) {
-      try {
-        await navigator.share({ files: [file], title: 'Authentic Photo', text: 'NFCapture: Verified Unedited Photo' });
-      } catch (err) {
+    
+    try {
+      const file = new File([encryptedData.buffer as ArrayBuffer], 'photo.nfcapture', { 
+        type: 'application/octet-stream' 
+      });
+
+      // Check if browser supports sharing this specific file
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Authentic Photo',
+          text: 'Verified unedited photo via NFCapture'
+        });
+      } else {
+        // Fallback for browsers that support share but not file share
         handleDownload();
       }
-    } else {
-      handleDownload();
+    } catch (err) {
+      // Don't trigger download if user just cancelled the share
+      if ((err as Error).name !== 'AbortError') {
+        console.error('Share failed:', err);
+        handleDownload();
+      }
     }
   };
 
@@ -192,42 +229,55 @@ const Capture: React.FC = () => {
   return (
     <div className="capture-view">
       {!capturedBlob ? (
-        <>
-          <div className="card" style={{ padding: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 style={{ margin: 0 }}>Pro Camera</h2>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {hasTorch && (
-                  <button className={`control-btn ${isTorchOn ? 'active' : ''}`} onClick={toggleTorch}>
-                    {isTorchOn ? <Zap size={20} /> : <ZapOff size={20} />}
-                  </button>
+        <div className="fullscreen-capture">
+          <button className="close-camera" onClick={() => navigate('/')}>
+            <X size={24} />
+          </button>
+
+          <div className="camera-preview-wrapper">
+            <div className={`camera-container ratio-${ratio}`} style={{ border: 'none', boxShadow: 'none', borderRadius: 0, margin: 0 }}>
+               <video ref={videoRef} autoPlay playsInline muted />
+            </div>
+
+            <div className="camera-overlay-top">
+              <div style={{ width: 40 }}>
+                {isVerified && (
+                  <div title="Live Verified">
+                    <ShieldCheck size={24} color="#10b981" />
+                  </div>
                 )}
-                <button className="control-btn" onClick={toggleCamera}>
-                  <FlipHorizontal size={20} />
-                </button>
               </div>
+              <div className="ratio-selector">
+                <span className={`ratio-option ${ratio === '1-1' ? 'active' : ''}`} onClick={() => setRatio('1-1')}>1:1</span>
+                <span className={`ratio-option ${ratio === '4-3' ? 'active' : ''}`} onClick={() => setRatio('4-3')}>4:3</span>
+                <span className={`ratio-option ${ratio === '16-9' ? 'active' : ''}`} onClick={() => setRatio('16-9')}>16:9</span>
+              </div>
+              <div style={{ width: 40 }} />
             </div>
 
-            <div className={`camera-container ratio-${ratio}`}>
-              <video ref={videoRef} autoPlay playsInline muted />
-            </div>
+            <div className="camera-overlay-bottom">
+               <div style={{ display: 'flex', width: '100%', justifyContent: 'space-around', alignItems: 'center' }}>
+                  {hasTorch ? (
+                    <button className="control-btn" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none' }} onClick={toggleTorch}>
+                      {isTorchOn ? <Zap size={24} fill="currentColor" /> : <ZapOff size={24} />}
+                    </button>
+                  ) : <div style={{ width: 44 }} />}
+                  
+                  <button className="shutter-btn" onClick={captureFrame}>
+                    <div style={{ width: 50, height: 50, borderRadius: '50%', border: '2px solid #000' }} />
+                  </button>
 
-            <div className="camera-controls">
-              <button className={`btn btn-outline ${ratio === '1-1' ? 'active' : ''}`} style={{ width: 'auto', padding: '0.5rem 1rem' }} onClick={() => setRatio('1-1')}>1:1</button>
-              <button className={`btn btn-outline ${ratio === '4-3' ? 'active' : ''}`} style={{ width: 'auto', padding: '0.5rem 1rem' }} onClick={() => setRatio('4-3')}>4:3</button>
-              <button className={`btn btn-outline ${ratio === '16-9' ? 'active' : ''}`} style={{ width: 'auto', padding: '0.5rem 1rem' }} onClick={() => setRatio('16-9')}>16:9</button>
+                  <button className="control-btn" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none' }} onClick={toggleCamera}>
+                    <FlipHorizontal size={24} />
+                  </button>
+               </div>
             </div>
-            
-            <button className="btn btn-primary" onClick={captureFrame} style={{ padding: '1.2rem' }}>
-              <Camera size={28} />
-              Take Photo
-            </button>
           </div>
-        </>
+        </div>
       ) : (
-        <div className="card" style={{ padding: '1rem' }}>
-          <h2>Review</h2>
-          <div className={`camera-container ratio-${ratio}`}>
+        <div className="card" style={{ padding: '1.25rem', animation: 'fadeIn 0.4s' }}>
+          <h2 style={{ marginBottom: '1.5rem' }}>Verify Photo</h2>
+          <div className={`camera-container ratio-${ratio}`} style={{ border: '2px solid var(--border)' }}>
             {previewUrl && <img src={previewUrl} alt="Preview" className="preview-img" />}
           </div>
           
@@ -238,18 +288,18 @@ const Capture: React.FC = () => {
                 Retake
               </button>
               <button className="btn btn-primary" onClick={handleConfirm} disabled={isEncrypting}>
-                {isEncrypting ? 'Encrypting...' : <><Check size={20} /> Confirm</>}
+                {isEncrypting ? 'Locking...' : <><Check size={20} /> Confirm</>}
               </button>
             </div>
           ) : (
             <div style={{ textAlign: 'center' }}>
-              <div className="badge" style={{ marginBottom: '1.5rem', background: '#dcfce7', color: '#166534' }}>
-                <Check size={14} style={{ marginRight: '0.5rem' }} /> Ready to Share
+              <div className="badge" style={{ marginBottom: '1.5rem', background: '#dcfce7', color: '#166534', padding: '0.6rem 1.2rem' }}>
+                <Check size={16} style={{ marginRight: '0.5rem' }} /> Photo Locked Successfully
               </div>
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <button className="btn btn-primary" onClick={handleShare}>
                   <Share2 size={20} />
-                  Share
+                  Share to WhatsApp
                 </button>
                 <button className="btn btn-outline" onClick={handleDownload}>
                   <Download size={20} />

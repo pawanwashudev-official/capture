@@ -12,10 +12,31 @@ interface RequestItem {
 const SettingsView: React.FC = () => {
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
     loadRequests();
+
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const loadRequests = async () => {
     try {
@@ -106,6 +127,19 @@ const SettingsView: React.FC = () => {
           <p style={{ margin: 0, fontWeight: 600 }}>{status.message}</p>
         </div>
       )}
+
+      <section className="card">
+        <h3>PWA Installation</h3>
+        <p>Install NFCapture on your home screen for a better camera experience.</p>
+        <button 
+          className="btn btn-primary" 
+          onClick={handleInstall} 
+          disabled={!deferredPrompt}
+          style={{ marginBottom: '1rem', opacity: deferredPrompt ? 1 : 0.6 }}
+        >
+          {deferredPrompt ? 'Install NFCapture App' : 'App Already Installed / Not Supported'}
+        </button>
+      </section>
 
       <section className="card">
         <h3>Backup & Restore</h3>
