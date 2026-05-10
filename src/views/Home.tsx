@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Link as LinkIcon, Trash2, Copy, Check, Download, Upload } from 'lucide-react';
+import { Plus, Link as LinkIcon, Trash2, Copy, Check, Download, Upload, ShieldAlert } from 'lucide-react';
 import { generateKeyPair } from '../utils/crypto';
-import { saveRequest, getAllRequests, deleteRequest } from '../utils/db';
+import { saveRequest, getAllRequests, deleteRequest, clearAllRequests } from '../utils/db';
 
 interface RequestItem {
   id: string;
@@ -14,9 +14,13 @@ const Home: React.FC = () => {
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [newName, setNewName] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadRequests();
+    loadRequests().catch(err => {
+      console.error(err);
+      setError('Failed to load local data. Please refresh the page.');
+    });
   }, []);
 
   const loadRequests = async () => {
@@ -25,14 +29,23 @@ const Home: React.FC = () => {
   };
 
   const handleExport = () => {
-    const data = JSON.stringify(requests, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `nfcapture_backup_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      if (requests.length === 0) {
+        alert('No requests to export.');
+        return;
+      }
+      const data = JSON.stringify(requests, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nfcapture_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to export backup.');
+    }
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,36 +55,64 @@ const Home: React.FC = () => {
     try {
       const text = await file.text();
       const imported: RequestItem[] = JSON.parse(text);
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      
       for (const req of imported) {
+        if (!req.id || !req.publicKey || !req.secretKey) continue;
         await saveRequest(req);
       }
-      loadRequests();
+      await loadRequests();
       alert('Backup restored successfully!');
+      e.target.value = ''; // Reset input
     } catch (err) {
-      alert('Failed to import backup. Invalid file format.');
+      console.error(err);
+      alert('Failed to import backup. Ensure it is a valid NFCapture JSON file.');
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (confirm('CRITICAL: This will erase ALL requests and private keys from this browser. This cannot be undone unless you have a backup. Proceed?')) {
+      try {
+        await clearAllRequests();
+        await loadRequests();
+        alert('All data erased.');
+      } catch (err) {
+        console.error(err);
+        alert('Failed to erase data.');
+      }
     }
   };
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
     
-    const keys = generateKeyPair();
-    const newRequest: RequestItem = {
-      id: newName.trim(),
-      publicKey: keys.publicKey,
-      secretKey: keys.secretKey,
-      createdAt: Date.now(),
-    };
-    
-    await saveRequest(newRequest);
-    setNewName('');
-    loadRequests();
+    try {
+      const keys = generateKeyPair();
+      const newRequest: RequestItem = {
+        id: newName.trim(),
+        publicKey: keys.publicKey,
+        secretKey: keys.secretKey,
+        createdAt: Date.now(),
+      };
+      
+      await saveRequest(newRequest);
+      setNewName('');
+      await loadRequests();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to create request.');
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (confirm(`Delete request "${id}"? You won't be able to unlock photos for this request if you haven't backed up the key.`)) {
-      await deleteRequest(id);
-      loadRequests();
+      try {
+        await deleteRequest(id);
+        await loadRequests();
+      } catch (err) {
+        console.error(err);
+        alert('Failed to delete request.');
+      }
     }
   };
 
@@ -172,6 +213,17 @@ const Home: React.FC = () => {
             </div>
           ))
         )}
+      </section>
+      <section className="card" style={{ border: '1px solid #fee2e2' }}>
+        <h2 style={{ color: '#991b1b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <ShieldAlert size={24} />
+          Danger Zone
+        </h2>
+        <p>Permanently erase all your private keys and request history.</p>
+        <button className="btn btn-outline" style={{ color: '#ef4444', borderColor: '#fca5a5' }} onClick={handleClearAll}>
+          <Trash2 size={18} />
+          Erase All Data
+        </button>
       </section>
     </div>
   );

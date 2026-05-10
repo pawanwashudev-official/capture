@@ -1,5 +1,5 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import { ExternalLink, Instagram, Send, Mail } from 'lucide-react';
+import { ExternalLink, Camera, Send, Mail } from 'lucide-react';
 import Home from './views/Home';
 import Capture from './views/Capture';
 import Unlock from './views/Unlock';
@@ -27,7 +27,7 @@ function App() {
             </p>
           </div>
 
-          <a href="https://github.com/pawanwashudev-official/NFCapture" target="_blank" className="btn btn-github">
+          <a href="https://github.com/pawanwashudev-official/NFCapture" target="_blank" className="btn btn-github" style={{ textDecoration: 'none' }}>
             <ExternalLink size={20} />
             Source Code
           </a>
@@ -37,7 +37,7 @@ function App() {
               <Mail size={16} /> Email
             </a>
             <a href="https://instagram.com/pawan_washudev" target="_blank" className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Instagram size={16} /> Instagram
+              <Camera size={16} /> Instagram
             </a>
             <a href="https://t.me/pawanwashudev" target="_blank" className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <Send size={16} /> Telegram

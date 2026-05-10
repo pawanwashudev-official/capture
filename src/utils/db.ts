@@ -46,3 +46,8 @@ export const deleteRequest = async (id: string) => {
   const db = await getDB();
   await db.delete('requests', id);
 };
+
+export const clearAllRequests = async () => {
+  const db = await getDB();
+  await db.clear('requests');
+};
