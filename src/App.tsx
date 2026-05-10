@@ -22,34 +22,28 @@ function App() {
         </main>
         
         <footer className="footer">
-          <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ color: 'var(--text)', margin: '0 0 0.5rem 0', fontSize: '1.5rem', fontWeight: 800 }}>NFCapture</h3>
-            <p style={{ margin: 0, maxWidth: '300px', marginLeft: 'auto', marginRight: 'auto' }}>
-              Restoring trust in photography through serverless cryptography.
-            </p>
-          </div>
+          <div className="footer-content">
+            <div className="footer-brand">
+              <h3>NFCapture</h3>
+              <p>Restoring trust in photography through serverless end-to-end encryption.</p>
+              <div className="footer-socials">
+                <a href="https://github.com/pawanwashudev-official/NFCapture" target="_blank" rel="noopener noreferrer" title="GitHub"><ExternalLink size={20} /></a>
+                <a href="https://instagram.com/pawan_washudev" target="_blank" rel="noopener noreferrer" title="Instagram"><Camera size={20} /></a>
+                <a href="https://t.me/pawanwashudev" target="_blank" rel="noopener noreferrer" title="Telegram"><Send size={20} /></a>
+                <a href="mailto:pawanwashudev@neubofy.in" title="Email"><Mail size={20} /></a>
+              </div>
+            </div>
 
-          <a href="https://github.com/pawanwashudev-official/NFCapture" target="_blank" className="btn btn-github" style={{ textDecoration: 'none' }}>
-            <ExternalLink size={20} />
-            Source Code
-          </a>
-          
-          <div className="footer-links" style={{ marginTop: '2.5rem' }}>
-            <a href="mailto:pawanwashudev@neubofy.in" className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Mail size={16} /> Email
-            </a>
-            <a href="https://instagram.com/pawan_washudev" target="_blank" className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Camera size={16} /> Instagram
-            </a>
-            <a href="https://t.me/pawanwashudev" target="_blank" className="footer-link" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Send size={16} /> Telegram
-            </a>
+            <div className="footer-info">
+              <div className="founder-card">
+                <p className="founder-name">Pawan Washudev</p>
+                <p className="founder-title">Founder @ Neubofy</p>
+                <a href="mailto:support@neubofy.in" className="support-link">support@neubofy.in</a>
+              </div>
+            </div>
           </div>
-
-          <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border)', fontSize: '0.85rem' }}>
-            <p style={{ margin: '0.25rem 0', color: 'var(--text)', fontWeight: 700 }}>Pawan Washudev</p>
-            <p style={{ margin: '0.25rem 0' }}>Founder @ Neubofy</p>
-            <p style={{ margin: '0.25rem 0' }}>Support: <a href="mailto:support@neubofy.in" style={{ color: 'var(--primary)', fontWeight: 600 }}>support@neubofy.in</a></p>
+          <div className="footer-bottom">
+            &copy; {new Date().getFullYear()} NFCapture. All rights reserved.
           </div>
         </footer>
       </div>

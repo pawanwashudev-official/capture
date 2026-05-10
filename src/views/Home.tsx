@@ -99,11 +99,11 @@ const Home: React.FC = () => {
       <section className="card" onClick={() => navigate('/unlock')} style={{ cursor: 'pointer', background: 'var(--primary)', color: 'white', border: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ background: 'rgba(255,255,255,0.2)', padding: '0.75rem', borderRadius: '12px' }}>
-            <Unlock size={24} />
+            <Unlock size={24} color="white" />
           </div>
           <div>
             <h2 style={{ margin: 0, color: 'white', fontSize: '1.25rem', fontWeight: 800 }}>Unlock Photo</h2>
-            <p style={{ margin: 0, color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>Verify a photo you received.</p>
+            <p style={{ margin: 0, color: '#fff', fontSize: '0.85rem', fontWeight: 500 }}>Verify a photo you received.</p>
           </div>
         </div>
       </section>

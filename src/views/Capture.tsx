@@ -1,9 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { RefreshCcw, Check, Share2, Download, AlertCircle, FlipHorizontal, Zap, ZapOff, X, ShieldCheck } from 'lucide-react';
+import { Share2, Download, AlertCircle, FlipHorizontal, Zap, ZapOff, X, ShieldCheck } from 'lucide-react';
 import { encryptImage } from '../utils/crypto';
 
-type AspectRatio = '1-1' | '4-3' | '16-9' | '9-16';
+type AspectRatio = '1:1' | '4:3' | '16:9' | '9:16' | 'Sensor';
 
 const Capture: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -15,75 +15,93 @@ const Capture: React.FC = () => {
   
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
-  const [ratio, setRatio] = useState<AspectRatio>('4-3');
+  const [ratio, setRatio] = useState<AspectRatio>('Sensor');
+  const [sensorRatio, setSensorRatio] = useState<number>(3/4);
   const [isTorchOn, setIsTorchOn] = useState(false);
   const [hasTorch, setHasTorch] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  
+  const [zoom, setZoom] = useState(1);
+  const [minZoom, setMinZoom] = useState(1);
+  const [maxZoom, setMaxZoom] = useState(1);
+  const [hasZoom, setHasZoom] = useState(false);
   
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [encryptedData, setEncryptedData] = useState<Uint8Array | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showFlash, setShowFlash] = useState(false);
+
+  // Lock Body Scroll
+  useEffect(() => {
+    if (!capturedBlob) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100dvh';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    };
+  }, [capturedBlob]);
 
   useEffect(() => {
-    if (publicKey) {
-      startCamera();
-    } else {
-      setError('Invalid or missing capture link.');
-    }
-    
-    return () => {
-      stopCamera();
-    };
+    if (publicKey) startCamera();
+    else setError('Invalid link.');
+    return () => stopCamera();
   }, [publicKey, facingMode]);
 
-  // Volume Button Capture Logic
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isVolumeKey = ['VolumeUp', 'VolumeDown', 'AudioVolumeUp', 'AudioVolumeDown'].includes(e.key);
-      if (isVolumeKey && !capturedBlob && stream) {
+      if (['VolumeUp', 'VolumeDown', 'AudioVolumeUp', 'AudioVolumeDown'].includes(e.key) && !capturedBlob && stream) {
         e.preventDefault();
         captureFrame();
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [capturedBlob, stream]);
+
+  const [isPortrait, setIsPortrait] = useState(true);
 
   const startCamera = async () => {
     stopCamera();
     setIsVerified(false);
     try {
       const constraints: MediaStreamConstraints = { 
-        video: { 
-          facingMode: facingMode,
-          width: { ideal: 4096 }, 
-          height: { ideal: 2160 }
-        },
+        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: false 
       };
-      
       const s = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(s);
+      if (videoRef.current) videoRef.current.srcObject = s;
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = s;
-      }
-
       const track = s.getVideoTracks()[0];
       const settings = track.getSettings();
       const capabilities = track.getCapabilities() as any;
+      
       setHasTorch(!!capabilities.torch);
-      
-      if (settings.frameRate && settings.facingMode) {
-        setIsVerified(true);
+      if (capabilities.zoom) {
+        setHasZoom(true);
+        setMinZoom(capabilities.zoom.min || 1);
+        setMaxZoom(capabilities.zoom.max || 1);
+        setZoom(settings.zoom || capabilities.zoom.min || 1);
       }
-      
+      if (settings.frameRate && settings.facingMode) setIsVerified(true);
     } catch (err) {
-      setError('Camera access denied or unavailable.');
+      setError('Camera access denied.');
     }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (!videoRef.current) return;
+    const { videoWidth, videoHeight } = videoRef.current;
+    const portrait = videoHeight > videoWidth;
+    setIsPortrait(portrait);
+    setSensorRatio(videoWidth / videoHeight);
   };
 
   const stopCamera = () => {
@@ -96,86 +114,74 @@ const Capture: React.FC = () => {
   const toggleCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
     setIsTorchOn(false);
+    setZoom(1);
+  };
+
+  const handleZoomChange = async (val: number) => {
+    if (!stream || !hasZoom) return;
+    const track = stream.getVideoTracks()[0];
+    try {
+      await track.applyConstraints({ advanced: [{ zoom: val } as any] });
+      setZoom(val);
+    } catch (err) {}
   };
 
   const toggleTorch = async () => {
     if (!stream || !hasTorch) return;
     const track = stream.getVideoTracks()[0];
     try {
-      await track.applyConstraints({
-        advanced: [{ torch: !isTorchOn } as any]
-      });
+      await track.applyConstraints({ advanced: [{ torch: !isTorchOn } as any] });
       setIsTorchOn(!isTorchOn);
-    } catch (err) {
-      console.error('Torch error:', err);
-    }
+    } catch (err) {}
   };
 
   const captureFrame = () => {
     if (!videoRef.current || !canvasRef.current) return;
-    
     const video = videoRef.current;
     const canvas = canvasRef.current;
-
     if (video.paused || video.ended || !isVerified) {
-      alert('Security Alert: Live camera stream not verified.');
+      alert('Live stream not verified.');
       return;
     }
+
+    // Trigger visual flash
+    setShowFlash(true);
+    setTimeout(() => setShowFlash(false), 400);
     
-    let targetWidth = video.videoWidth;
-    let targetHeight = video.videoHeight;
+    // Dynamic mapping for ratios
+    let targetRatio = sensorRatio;
+    if (ratio === '1:1') targetRatio = 1/1;
+    if (ratio === '4:3') targetRatio = isPortrait ? 3/4 : 4/3;
+    if (ratio === '9:16') targetRatio = 9/16;
+    if (ratio === '16:9') targetRatio = 16/9;
     
-    // Exact Aspect Ratio Logic
-    if (ratio === '1-1') {
-      const size = Math.min(targetWidth, targetHeight);
-      targetWidth = size;
-      targetHeight = size;
-    } else if (ratio === '4-3') {
-      if (targetWidth / targetHeight > 4/3) {
-        targetWidth = targetHeight * (4/3);
-      } else {
-        targetHeight = targetWidth / (4/3);
-      }
-    } else if (ratio === '16-9') {
-       if (targetWidth / targetHeight > 16/9) {
-        targetWidth = targetHeight * (16/9);
-      } else {
-        targetHeight = targetWidth / (16/9);
-      }
-    } else if (ratio === '9-16') {
-       if (targetWidth / targetHeight > 9/16) {
-        targetWidth = targetHeight * (9/16);
-      } else {
-        targetHeight = targetWidth / (9/16);
-      }
-    }
+    const vW = video.videoWidth;
+    const vH = video.videoHeight;
+    let dW = vW, dH = vH;
     
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
+    if (vW / vH > targetRatio) dW = vH * targetRatio;
+    else dH = vW / targetRatio;
     
+    canvas.width = dW;
+    canvas.height = dH;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      // Precision Centering
-      const startX = (video.videoWidth - targetWidth) / 2;
-      const startY = (video.videoHeight - targetHeight) / 2;
-      
+      const sX = (vW - dW) / 2, sY = (vH - dH) / 2;
       ctx.save();
-      
-      // Mirror result if using front camera to match preview and user expectations
-      if (facingMode === 'user') {
-        ctx.translate(targetWidth, 0);
-        ctx.scale(-1, 1);
-      }
-      
-      ctx.drawImage(video, startX, startY, targetWidth, targetHeight, 0, 0, targetWidth, targetHeight);
+      if (facingMode === 'user') { ctx.translate(dW, 0); ctx.scale(-1, 1); }
+      ctx.drawImage(video, sX, sY, dW, dH, 0, 0, dW, dH);
       ctx.restore();
       
-      // Verification Stamp (Deep Rended into pixels)
+      // Branding / Security - Scaled watermark
+      const fontSize = Math.max(14, Math.floor(dH * 0.025));
+      
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillRect(10, targetHeight - 45, 230, 35);
-      ctx.fillStyle = 'white';
-      ctx.font = 'bold 12px monospace';
-      ctx.fillText(`VERIFIED LIVE: ${new Date().toLocaleString()}`, 20, targetHeight - 22);
+      ctx.fillRect(0, dH - (fontSize * 2.5), dW, fontSize * 2.5);
+      
+      ctx.fillStyle = '#10b981'; // Green for "Verified"
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      const text = `VERIFIED LIVE • ${new Date().toLocaleString()} • NFCAPTURE`;
+      ctx.fillText(text, fontSize, dH - fontSize);
 
       canvas.toBlob((blob) => {
         if (blob) {
@@ -187,48 +193,14 @@ const Capture: React.FC = () => {
     }
   };
 
-  const handleRetake = () => {
-    setCapturedBlob(null);
-    setPreviewUrl(null);
-    setEncryptedData(null);
-    startCamera();
-  };
-
-  const handleConfirm = async () => {
-    if (!capturedBlob || !publicKey) return;
-    setIsEncrypting(true);
-    try {
-      const encrypted = await encryptImage(capturedBlob, publicKey);
-      setEncryptedData(encrypted);
-    } catch (err) {
-      setError('Encryption failed.');
-    } finally {
-      setIsEncrypting(false);
-    }
-  };
-
   const handleShare = async () => {
     if (!encryptedData) return;
-    
     try {
-      const file = new File([encryptedData.buffer as ArrayBuffer], 'photo.nfcapture', { 
-        type: 'application/octet-stream' 
-      });
-
+      const file = new File([encryptedData.buffer as ArrayBuffer], 'photo.nfcapture', { type: 'application/octet-stream' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'Authentic Photo',
-          text: 'Verified unedited photo via NFCapture'
-        });
-      } else {
-        handleDownload();
-      }
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        handleDownload();
-      }
-    }
+        await navigator.share({ files: [file], title: 'Authentic Photo', text: 'NFCapture verified photo' });
+      } else { handleDownload(); }
+    } catch (err) { if ((err as Error).name !== 'AbortError') handleDownload(); }
   };
 
   const handleDownload = () => {
@@ -236,19 +208,41 @@ const Capture: React.FC = () => {
     const blob = new Blob([encryptedData.buffer as ArrayBuffer], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = 'photo.nfcapture';
-    a.click();
+    a.href = url; a.download = 'photo.nfcapture'; a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // UI helpers for ratio boxes
+  const getContainerStyles = (): React.CSSProperties => {
+    let aspect = sensorRatio;
+    if (ratio === '1:1') aspect = 1/1;
+    if (ratio === '4:3') aspect = isPortrait ? 3/4 : 4/3;
+    if (ratio === '9:16') aspect = 9/16;
+    if (ratio === '16:9') aspect = 16/9;
+    
+    const isWiderThanViewport = aspect > (window.innerWidth / window.innerHeight);
+
+    return {
+      aspectRatio: `${aspect}`,
+      width: isWiderThanViewport ? '100%' : 'auto',
+      height: isWiderThanViewport ? 'auto' : '100%',
+      maxWidth: '100%',
+      maxHeight: '100%',
+      position: 'relative',
+      background: '#000',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden'
+    };
   };
 
   if (error) {
     return (
-      <div className="card" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-        <AlertCircle size={48} color="#ef4444" style={{ marginBottom: '1rem' }} />
-        <h3>Error</h3>
-        <p>{error}</p>
-        <button className="btn btn-primary" onClick={() => window.location.reload()}>Retry</button>
+      <div className="card" style={{ textAlign: 'center', marginTop: '5rem' }}>
+        <AlertCircle size={48} color="var(--primary)" style={{ marginBottom: '1rem' }} />
+        <h3>Error</h3><p>{error}</p>
+        <button className="btn btn-primary" onClick={() => navigate('/')}>Go Home</button>
       </div>
     );
   }
@@ -257,85 +251,130 @@ const Capture: React.FC = () => {
     <div className="capture-view">
       {!capturedBlob ? (
         <div className="fullscreen-capture">
-          <button className="close-camera" onClick={() => navigate('/')}>
-            <X size={24} />
-          </button>
-
-          <div className="camera-preview-wrapper">
-            <div className={`camera-container ratio-${ratio}`} style={{ border: 'none', boxShadow: 'none', borderRadius: 0, margin: 0 }}>
-               <video ref={videoRef} autoPlay playsInline muted className={facingMode === 'user' ? 'mirror' : ''} />
+          <div className={`camera-flash ${showFlash ? 'active' : ''}`} />
+          <div className="camera-preview-area">
+            <div style={getContainerStyles()}>
+               <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted 
+                onLoadedMetadata={handleLoadedMetadata}
+                className={facingMode === 'user' ? 'mirror' : ''} 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+               />
             </div>
+            
+            <div className="camera-overlay">
+              <div className="camera-top-bar">
+                <button 
+                  className="btn btn-outline" 
+                  style={{ width: '48px', height: '48px', padding: 0, background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '50%' }} 
+                  onClick={() => navigate('/')}
+                  aria-label="Exit Camera"
+                >
+                  <X size={24} />
+                </button>
+                <div className="ratio-selector">
+                  {([
+                    'Sensor', 
+                    '1:1', 
+                    isPortrait ? '4:3' : '4:3', // Just a label, logic handles it
+                    isPortrait ? '9:16' : '16:9'
+                  ] as AspectRatio[]).map(r => (
+                    <button 
+                      key={r} 
+                      className={`ratio-option ${ratio === r ? 'active' : ''}`} 
+                      onClick={() => setRatio(r)}
+                      aria-label={`Aspect ratio ${r}`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
 
-            <div className="camera-overlay-top">
-              <div style={{ width: 40 }}>
-                {isVerified && (
-                  <div title="Live Verified">
-                    <ShieldCheck size={24} color="#10b981" />
+                <div style={{ width: 48, textAlign: 'center' }}>
+                  {isVerified && <ShieldCheck size={28} color="#10b981" />}
+                </div>
+              </div>
+
+              <div className="camera-bottom-bar">
+                {hasZoom && maxZoom > minZoom && (
+                  <div className="zoom-slider-container">
+                    <input 
+                      type="range" 
+                      min={minZoom} 
+                      max={maxZoom} 
+                      step="0.1" 
+                      value={zoom} 
+                      onChange={(e) => handleZoomChange(parseFloat(e.target.value))} 
+                      style={{ flex: 1, accentColor: 'white', height: '32px' }} 
+                      aria-label="Zoom"
+                    />
+                    <span style={{ color: 'white', fontSize: '0.85rem', fontWeight: 800, minWidth: '2.5rem', textAlign: 'right' }}>{zoom.toFixed(1)}x</span>
                   </div>
                 )}
-              </div>
-              <div className="ratio-selector">
-                <span className={`ratio-option ${ratio === '1-1' ? 'active' : ''}`} onClick={() => setRatio('1-1')}>1:1</span>
-                <span className={`ratio-option ${ratio === '4-3' ? 'active' : ''}`} onClick={() => setRatio('4-3')}>4:3</span>
-                <span className={`ratio-option ${ratio === '16-9' ? 'active' : ''}`} onClick={() => setRatio('16-9')}>16:9</span>
-                <span className={`ratio-option ${ratio === '9-16' ? 'active' : ''}`} onClick={() => setRatio('9-16')}>9:16</span>
-              </div>
-              <div style={{ width: 40 }} />
-            </div>
-
-            <div className="camera-overlay-bottom">
-               <div style={{ display: 'flex', width: '100%', justifyContent: 'space-around', alignItems: 'center' }}>
-                  {hasTorch ? (
-                    <button className="control-btn" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none' }} onClick={toggleTorch}>
-                      {isTorchOn ? <Zap size={24} fill="currentColor" /> : <ZapOff size={24} />}
-                    </button>
-                  ) : <div style={{ width: 44 }} />}
-                  
-                  <button className="shutter-btn" onClick={captureFrame}>
-                    <div style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid #000' }} />
+                <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', maxWidth: '340px' }}>
+                  <button 
+                    className="btn" 
+                    style={{ width: '56px', height: '56px', padding: 0, background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', visibility: hasTorch ? 'visible' : 'hidden', borderRadius: '50%' }} 
+                    onClick={toggleTorch}
+                    aria-label={isTorchOn ? "Turn off Flash" : "Turn on Flash"}
+                  >
+                    {isTorchOn ? <Zap size={24} fill="white" /> : <ZapOff size={24} />}
                   </button>
-
-                  <button className="control-btn" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none' }} onClick={toggleCamera}>
+                  <button 
+                    className="shutter-btn" 
+                    onClick={captureFrame}
+                    aria-label="Take Photo"
+                  >
+                    <div className="shutter-inner" />
+                  </button>
+                  <button 
+                    className="btn" 
+                    style={{ width: '56px', height: '56px', padding: 0, background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '50%' }} 
+                    onClick={toggleCamera}
+                    aria-label="Switch Camera"
+                  >
                     <FlipHorizontal size={24} />
                   </button>
-               </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="card" style={{ padding: '1.25rem', animation: 'fadeIn 0.4s' }}>
-          <h2 style={{ marginBottom: '1.5rem' }}>Verify Photo</h2>
-          <div className={`camera-container ratio-${ratio}`} style={{ border: '2px solid var(--border)' }}>
-            {previewUrl && <img src={previewUrl} alt="Preview" className="preview-img" />}
-          </div>
-          
-          {!encryptedData ? (
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button className="btn btn-outline" onClick={handleRetake} disabled={isEncrypting}>
-                <RefreshCcw size={20} />
-                Retake
-              </button>
-              <button className="btn btn-primary" onClick={handleConfirm} disabled={isEncrypting}>
-                {isEncrypting ? 'Locking...' : <><Check size={20} /> Confirm</>}
-              </button>
+
+
+        <div className="main-content" style={{ animation: 'fadeIn 0.3s' }}>
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0 }}>Verified Photo</h2>
+              <button className="btn btn-outline" style={{ width: 'auto', padding: '0.5rem' }} onClick={() => { setCapturedBlob(null); startCamera(); }}><X size={20} /></button>
             </div>
-          ) : (
-            <div style={{ textAlign: 'center' }}>
-              <div className="badge" style={{ marginBottom: '1.5rem', background: '#dcfce7', color: '#166534', padding: '0.6rem 1.2rem' }}>
-                <Check size={16} style={{ marginRight: '0.5rem' }} /> Photo Locked Successfully
-              </div>
+            <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', background: '#000', marginBottom: '1.5rem' }}>
+              <img src={previewUrl!} alt="Preview" style={{ width: '100%', display: 'block' }} />
+            </div>
+            {!encryptedData ? (
               <div style={{ display: 'flex', gap: '1rem' }}>
-                <button className="btn btn-primary" onClick={handleShare}>
-                  <Share2 size={20} />
-                  Share to WhatsApp
-                </button>
-                <button className="btn btn-outline" onClick={handleDownload}>
-                  <Download size={20} />
-                  Download
-                </button>
+                <button className="btn btn-outline" onClick={() => { setCapturedBlob(null); startCamera(); }} disabled={isEncrypting}>Retake</button>
+                <button className="btn btn-primary" onClick={async () => {
+                  if (!capturedBlob || !publicKey) return;
+                  setIsEncrypting(true);
+                  try { const encrypted = await encryptImage(capturedBlob, publicKey); setEncryptedData(encrypted); } 
+                  catch (err) { alert('Encryption failed.'); } finally { setIsEncrypting(false); }
+                }} disabled={isEncrypting}>{isEncrypting ? 'Encrypting...' : 'Lock Photo'}</button>
               </div>
-            </div>
-          )}
+            ) : (
+              <div style={{ textAlign: 'center' }}>
+                <div className="badge" style={{ marginBottom: '1.5rem', width: '100%', display: 'block', padding: '0.75rem', borderRadius: '8px' }}>Locked & Secured</div>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <button className="btn btn-primary" onClick={handleShare}><Share2 size={20} /> Share</button>
+                  <button className="btn btn-outline" onClick={handleDownload}><Download size={20} /> Save</button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
       <canvas ref={canvasRef} style={{ display: 'none' }} />

@@ -6,20 +6,43 @@ const Header: React.FC = () => {
 
   return (
     <header className="header">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '600px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }} onClick={() => navigate('/')}>
-          <Camera size={24} color="#4f46e5" />
-          <h1>NFCapture</h1>
+      <div className="header-content">
+        <div 
+          style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', minHeight: '48px' }} 
+          onClick={() => navigate('/')}
+          role="button"
+          aria-label="NFCapture Home"
+        >
+          <Camera size={26} color="var(--primary)" />
+          <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)' }}>NFCapture</h1>
         </div>
-        <nav style={{ display: 'flex', gap: '0.5rem' }}>
-           <button className="btn btn-outline" style={{ padding: '0.5rem 0.6rem', width: 'auto', fontSize: '0.75rem', border: 'none', boxShadow: 'none' }} onClick={() => navigate('/')}>
-             <Home size={18} />
+        <nav style={{ display: 'flex', gap: '0.4rem' }}>
+           <button 
+             className="btn btn-outline" 
+             style={{ padding: '0.75rem', width: 'auto', border: 'none', background: 'transparent', minWidth: '48px', minHeight: '48px' }} 
+             title="Home" 
+             aria-label="Home"
+             onClick={() => navigate('/')}
+           >
+             <Home size={22} />
            </button>
-           <button className="btn btn-outline" style={{ padding: '0.5rem 0.6rem', width: 'auto', fontSize: '0.75rem', border: 'none', boxShadow: 'none' }} onClick={() => navigate('/unlock')}>
-             <UnlockIcon size={18} />
+           <button 
+             className="btn btn-outline" 
+             style={{ padding: '0.75rem', width: 'auto', border: 'none', background: 'transparent', minWidth: '48px', minHeight: '48px' }} 
+             title="Unlock Photo" 
+             aria-label="Unlock Photo"
+             onClick={() => navigate('/unlock')}
+           >
+             <UnlockIcon size={22} />
            </button>
-           <button className="btn btn-outline" style={{ padding: '0.5rem 0.6rem', width: 'auto', fontSize: '0.75rem', border: 'none', boxShadow: 'none' }} onClick={() => navigate('/settings')}>
-             <Settings size={18} />
+           <button 
+             className="btn btn-outline" 
+             style={{ padding: '0.75rem', width: 'auto', border: 'none', background: 'transparent', minWidth: '48px', minHeight: '48px' }} 
+             title="Settings" 
+             aria-label="Settings"
+             onClick={() => navigate('/settings')}
+           >
+             <Settings size={22} />
            </button>
         </nav>
       </div>
@@ -28,3 +51,4 @@ const Header: React.FC = () => {
 };
 
 export default Header;
+
