@@ -1,73 +1,50 @@
-# React + TypeScript + Vite
+# NFCapture 🛡️
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**NFCapture** (No-Filter Capture) is a 100% serverless, end-to-end encrypted, and database-free web application designed to restore trust in photography for high-stakes verifications, such as marriage proposals.
 
-Currently, two official plugins are available:
+It guarantees that a photo is taken **live**, **unedited**, and **unaltered** through a cryptographically secure "Lock & Key" workflow.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Live Demo
+[https://nf-capture.vercel.app](https://nf-capture.vercel.app) (Replace with your actual Vercel URL)
 
-## React Compiler
+## ✨ Features
+- **Serverless Trust:** No database, no backend. Everything happens in your browser.
+- **Mandatory Live Camera:** Strictly enforces camera capture; no file uploads allowed for the source.
+- **Asymmetric Encryption:** Uses Curve25519 (tweetnacl) to ensure the sender cannot view or edit the photo after capture.
+- **Local Private Keys:** Private keys are stored safely in your browser's IndexedDB.
+- **Privacy First:** Your data never leaves your device in an unencrypted state.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ How it Works
+1. **Requester (Owner):** Generates a capture request. The Private Key is saved locally.
+2. **Sender (Groom):** Clicks the link, takes a photo, and the app encrypts it instantly.
+3. **Distribution:** The Sender shares the `.nfcapture` file via WhatsApp/Email.
+4. **Unlock:** The Requester uploads the file, and the app unlocks it using the stored local key.
 
-## Expanding the ESLint configuration
+## 💻 Tech Stack
+- **React + TypeScript + Vite**
+- **Tweetnacl.js** (Cryptography)
+- **IDB** (IndexedDB for key storage)
+- **Lucide React** (Icons)
+- **CSS Animations** (Premium UI/UX)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🏗️ Local Development
+```bash
+# Clone the repo
+git clone https://github.com/pawanwashudev-official/NFCapture.git
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+# Install dependencies
+npm install
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Run dev server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 👨‍💻 Developer
+Developed with ❤️ by **Pawan Washudev**
+- **Founder:** Neubofy
+- **Email:** pawanwashudev@neubofy.in
+- **Instagram:** [@pawan_washudev](https://instagram.com/pawan_washudev)
+- **Telegram:** [@pawanwashudev](https://t.me/pawanwashudev)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 📄 License
+Open Source under the MIT License.
