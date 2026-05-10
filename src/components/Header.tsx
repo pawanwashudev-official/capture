@@ -1,4 +1,4 @@
-import { Camera, Unlock as UnlockIcon, Home } from 'lucide-react';
+import { Camera, Unlock as UnlockIcon, Home, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Header: React.FC = () => {
@@ -11,14 +11,15 @@ const Header: React.FC = () => {
           <Camera size={24} color="#4f46e5" />
           <h1>NFCapture</h1>
         </div>
-        <nav style={{ display: 'flex', gap: '0.75rem' }}>
-           <button className="btn btn-outline" style={{ padding: '0.5rem 0.75rem', width: 'auto', fontSize: '0.8rem' }} onClick={() => navigate('/')}>
+        <nav style={{ display: 'flex', gap: '0.5rem' }}>
+           <button className="btn btn-outline" style={{ padding: '0.5rem 0.6rem', width: 'auto', fontSize: '0.75rem', border: 'none', boxShadow: 'none' }} onClick={() => navigate('/')}>
              <Home size={18} />
-             <span>Request</span>
            </button>
-           <button className="btn btn-primary" style={{ padding: '0.5rem 0.75rem', width: 'auto', fontSize: '0.8rem' }} onClick={() => navigate('/unlock')}>
+           <button className="btn btn-outline" style={{ padding: '0.5rem 0.6rem', width: 'auto', fontSize: '0.75rem', border: 'none', boxShadow: 'none' }} onClick={() => navigate('/unlock')}>
              <UnlockIcon size={18} />
-             <span>Unlock</span>
+           </button>
+           <button className="btn btn-outline" style={{ padding: '0.5rem 0.6rem', width: 'auto', fontSize: '0.75rem', border: 'none', boxShadow: 'none' }} onClick={() => navigate('/settings')}>
+             <Settings size={18} />
            </button>
         </nav>
       </div>

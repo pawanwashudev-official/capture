@@ -3,6 +3,7 @@ import { ExternalLink, Camera, Send, Mail } from 'lucide-react';
 import Home from './views/Home';
 import Capture from './views/Capture';
 import Unlock from './views/Unlock';
+import SettingsView from './views/Settings';
 import Header from './components/Header';
 import './App.css';
 
@@ -16,6 +17,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/capture" element={<Capture />} />
             <Route path="/unlock" element={<Unlock />} />
+            <Route path="/settings" element={<SettingsView />} />
           </Routes>
         </main>
         
