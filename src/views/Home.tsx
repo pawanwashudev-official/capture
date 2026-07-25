@@ -73,7 +73,7 @@ const Home: React.FC = () => {
     <div className="home-view">
       <section className="card">
         <h2 style={{ color: 'var(--text)', marginBottom: '0.25rem', fontWeight: 900 }}>Create Request</h2>
-        <p style={{ color: 'var(--text-light)', marginBottom: '1.5rem' }}>Generate a secure link for the groom.</p>
+        <p style={{ color: 'var(--text-light)', marginBottom: '1.5rem' }}>Generate a secure link for the client.</p>
         
         <div style={{ marginBottom: '1.25rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 800, fontSize: '0.75rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
