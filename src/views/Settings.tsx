@@ -14,10 +14,19 @@ const SettingsView: React.FC = () => {
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
+  const loadRequests = async () => {
+    try {
+      const data = await getAllRequests();
+      setRequests(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     loadRequests();
 
-    const handleBeforeInstallPrompt = (e: any) => {
+    const handleBeforeInstallPrompt = (e: Event | any) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
@@ -38,14 +47,6 @@ const SettingsView: React.FC = () => {
     }
   };
 
-  const loadRequests = async () => {
-    try {
-      const data = await getAllRequests();
-      setRequests(data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const showStatus = (type: 'success' | 'error', message: string) => {
     setStatus({ type, message });
@@ -63,7 +64,7 @@ const SettingsView: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `nfcapture_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `capture_backup_${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
       showStatus('success', 'Backup exported successfully!');
@@ -130,14 +131,14 @@ const SettingsView: React.FC = () => {
 
       <section className="card">
         <h3>PWA Installation</h3>
-        <p>Install NFCapture on your home screen for a better camera experience.</p>
+        <p>Install Capture on your home screen for a better camera experience.</p>
         <button 
           className="btn btn-primary" 
           onClick={handleInstall} 
           disabled={!deferredPrompt}
           style={{ marginBottom: '1rem', opacity: deferredPrompt ? 1 : 0.6 }}
         >
-          {deferredPrompt ? 'Install NFCapture App' : 'App Already Installed / Not Supported'}
+          {deferredPrompt ? 'Install Capture App' : 'App Already Installed / Not Supported'}
         </button>
       </section>
 

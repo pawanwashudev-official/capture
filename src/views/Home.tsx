@@ -17,14 +17,15 @@ const Home: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadRequests().catch(console.error);
-  }, []);
-
   const loadRequests = async () => {
     const data = await getAllRequests();
     setRequests(data.sort((a, b) => b.createdAt - a.createdAt));
   };
+
+  useEffect(() => {
+    loadRequests().catch(console.error);
+  }, []);
+
 
   const handleCreate = async () => {
     if (!newName.trim()) return;

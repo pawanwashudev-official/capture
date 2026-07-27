@@ -24,7 +24,7 @@ function App() {
         <footer className="footer">
           <div className="footer-content">
             <div className="footer-brand">
-              <h3>NFCapture</h3>
+              <h3>Capture</h3>
               <p>Restoring trust in photography through serverless end-to-end encryption.</p>
               <div className="footer-socials">
                 <a href="https://github.com/pawanwashudev-official/NFCapture" target="_blank" rel="noopener noreferrer" title="GitHub"><ExternalLink size={20} /></a>
@@ -43,7 +43,7 @@ function App() {
             </div>
           </div>
           <div className="footer-bottom">
-            &copy; {new Date().getFullYear()} NFCapture. All rights reserved.
+            &copy; {new Date().getFullYear()} Capture. All rights reserved.
           </div>
         </footer>
       </div>

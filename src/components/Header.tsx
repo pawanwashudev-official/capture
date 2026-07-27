@@ -11,10 +11,10 @@ const Header: React.FC = () => {
           style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', minHeight: '48px' }} 
           onClick={() => navigate('/')}
           role="button"
-          aria-label="NFCapture Home"
+          aria-label="Capture Home"
         >
           <Camera size={26} color="var(--primary)" />
-          <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)' }}>NFCapture</h1>
+          <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)' }}>Capture</h1>
         </div>
         <nav style={{ display: 'flex', gap: '0.4rem' }}>
            <button 
