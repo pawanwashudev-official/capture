@@ -90,7 +90,7 @@ const Capture: React.FC = () => {
       if (videoRef.current) {
         videoRef.current.srcObject = s;
         // On mobile, sometimes play() needs to be explicit
-        try { await videoRef.current.play(); } catch (e) {}
+        try { await videoRef.current.play(); } catch (err) {}
       }
       
       const track = s.getVideoTracks()[0];
@@ -236,9 +236,9 @@ const Capture: React.FC = () => {
   const handleShare = async () => {
     if (!encryptedData) return;
     try {
-      const file = new File([encryptedData.buffer as ArrayBuffer], 'photo.nfcapture', { type: 'application/octet-stream' });
+      const file = new File([encryptedData.buffer as ArrayBuffer], 'photo.capture', { type: 'application/octet-stream' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Authentic Photo', text: 'NFCapture verified photo' });
+        await navigator.share({ files: [file], title: 'Authentic Photo', text: 'Capture verified photo' });
       } else { handleDownload(); }
     } catch (err) { if ((err as Error).name !== 'AbortError') handleDownload(); }
   };
@@ -248,7 +248,7 @@ const Capture: React.FC = () => {
     const blob = new Blob([encryptedData.buffer as ArrayBuffer], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'photo.nfcapture'; a.click();
+    a.href = url; a.download = 'photo.capture'; a.click();
     URL.revokeObjectURL(url);
   };
 

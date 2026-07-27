@@ -17,10 +17,6 @@ const Unlock: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
 
-  useEffect(() => {
-    loadRequests();
-  }, []);
-
   const loadRequests = async () => {
     const data = await getAllRequests();
     setRequests(data);
@@ -28,6 +24,11 @@ const Unlock: React.FC = () => {
       setSelectedRequestId(data[0].id);
     }
   };
+
+  useEffect(() => {
+    loadRequests();
+  }, []);
+
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -58,7 +59,7 @@ const Unlock: React.FC = () => {
       <div className="card">
         <h2>Unlock Photo</h2>
         <p style={{ color: 'var(--text-light)', marginBottom: '1.5rem' }}>
-          Select the request name and upload the <b>.nfcapture</b> file.
+          Select the request name and upload the <b>.capture</b> file.
         </p>
 
         {requests.length === 0 ? (
@@ -79,11 +80,11 @@ const Unlock: React.FC = () => {
               ))}
             </select>
 
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>2. Upload .nfcapture file</label>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>2. Upload .capture file</label>
             <div className="unlock-dropzone" style={{ position: 'relative' }}>
               <input 
                 type="file" 
-                accept=".nfcapture" 
+                accept=".capture"
                 onChange={handleFileChange}
                 style={{ 
                   position: 'absolute', 
@@ -99,7 +100,7 @@ const Unlock: React.FC = () => {
                 </div>
                 <div>
                   <h4 style={{ margin: '0 0 0.25rem 0' }}>{isDecrypting ? 'Decrypting...' : 'Drop file here or click'}</h4>
-                  <p style={{ margin: 0, fontSize: '0.85rem' }}>Only .nfcapture files are supported</p>
+                  <p style={{ margin: 0, fontSize: '0.85rem' }}>Only .capture files are supported</p>
                 </div>
               </div>
             </div>

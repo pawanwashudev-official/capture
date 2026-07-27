@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
-        name: 'NFCapture - Trusted Photo Sharing',
-        short_name: 'NFCapture',
+        name: 'Capture - Trusted Photo Sharing',
+        short_name: 'Capture',
         description: 'Serverless end-to-end encrypted authentic photo sharing.',
         theme_color: '#4f46e5',
         icons: [
